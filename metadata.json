@@ -1,0 +1,5 @@
+{
+  "name": "AI Culinary Companion",
+  "description": "An AI-powered recipe finder that helps you discover dishes based on ingredients, cuisine, occasion, and more. Chat with our AI chef for personalized recommendations and culinary inspiration.",
+  "requestFramePermissions": []
+}
