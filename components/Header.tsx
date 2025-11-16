@@ -1,21 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Filters } from '../types';
 import { FilterCategory } from '../constants';
 import { SuggestionTag } from './SuggestionTag';
+import { AuthModal } from './AuthModal';
+import { SupabaseAuthService, type AuthUser } from '../services/supabaseAuthService';
 
 interface NavbarProps {
     onSuggestionClick: (category: keyof Omit<Filters, 'searchQuery'>, value: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onSuggestionClick }) => {
-  const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Check if user is logged in on mount and listen to auth changes
+  useEffect(() => {
+    // Get current session
+    SupabaseAuthService.getCurrentUser().then(user => {
+      setCurrentUser(user);
+    });
+
+    // Listen to auth state changes
+    const { data: { subscription } } = SupabaseAuthService.onAuthStateChange((user) => {
+      setCurrentUser(user);
+    });
+
+    // Cleanup subscription
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   const handleUserClick = () => {
-    setShowUserPopup(true);
+    if (currentUser) {
+      setShowUserMenu(!showUserMenu);
+    } else {
+      setShowAuthModal(true);
+    }
   };
 
-  const closePopup = () => {
-    setShowUserPopup(false);
+  const handleAuthSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
+  };
+
+  const handleLogout = async () => {
+    await SupabaseAuthService.signOut();
+    setCurrentUser(null);
+    setShowUserMenu(false);
   };
 
   const handleLogoClick = () => {
@@ -48,59 +80,49 @@ export const Navbar: React.FC<NavbarProps> = ({ onSuggestionClick }) => {
             </div>
 
             {/* Right Side: User Profile */}
-            <div className="flex-shrink-0 flex items-center space-x-2">
+            <div className="flex-shrink-0 flex items-center space-x-2 relative">
                 {/* User Profile Button */}
                 <button 
                     onClick={handleUserClick}
-                    className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-300 transition"
+                    className="h-10 w-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white hover:from-orange-500 hover:to-red-600 transition shadow-md"
                 >
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
+                    {currentUser ? (
+                        <span className="font-bold text-sm">{currentUser.name.charAt(0).toUpperCase()}</span>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                    )}
                 </button>
+
+                {/* User Menu Dropdown */}
+                {currentUser && showUserMenu && (
+                    <div className="absolute top-12 right-0 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-56 z-50 animate-fade-in-up">
+                        <div className="px-4 py-3 border-b border-gray-100">
+                            <p className="text-sm font-semibold text-gray-800">{currentUser.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
+                        </div>
+                        <button
+                            onClick={handleLogout}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition flex items-center space-x-2"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            <span>Đăng xuất</span>
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
       </div>
 
-      {/* User Popup */}
-      {showUserPopup && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4"
-          onClick={closePopup}
-        >
-          <div 
-            className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full animate-fade-in-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-center">
-              {/* Icon */}
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-orange-100 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              
-              {/* Title */}
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                Chức năng đang phát triển
-              </h3>
-              
-              {/* Message */}
-              <p className="text-gray-600 mb-6">
-                Tính năng đăng nhập và quản lý tài khoản đang được phát triển. 
-                Vui lòng quay lại sau nhé! 
-              </p>
-              
-              {/* Button */}
-              <button
-                onClick={closePopup}
-                className="w-full bg-orange-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-orange-600 transition-all duration-200 transform hover:scale-105"
-              >
-                Đã hiểu
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal 
+          onClose={() => setShowAuthModal(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
       )}
     </header>
     </>
