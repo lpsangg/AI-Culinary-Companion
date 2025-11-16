@@ -11,6 +11,7 @@ import type { Recipe, Filters } from './types';
 import { FilterCategory } from './constants';
 import { FilterModal } from './components/FilterModal';
 import { generateRecipeFromPrompt } from './services/geminiService';
+import { recipeGenerationLimiter } from './utils/rateLimiter';
 
 // Function to shuffle an array
 const shuffleArray = (array: any[]) => {
@@ -106,6 +107,15 @@ const App: React.FC = () => {
 
   const handleGenerateRecipe = async (prompt: string) => {
     if (!prompt || isGenerating) return;
+    
+    // Kiểm tra rate limit
+    const limitCheck = recipeGenerationLimiter.checkLimit();
+    if (!limitCheck.allowed) {
+      setAlertMessage(`Bạn đã tạo quá nhiều công thức. Vui lòng thử lại sau ${limitCheck.retryAfter} giây.`);
+      setAlertType('warning');
+      return;
+    }
+    
     setIsGenerating(true);
     try {
       const generatedRecipe = await generateRecipeFromPrompt(prompt);

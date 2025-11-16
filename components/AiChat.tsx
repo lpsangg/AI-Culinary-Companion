@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage, Recipe } from '../types';
 import { getAiRecipeSuggestion } from '../services/geminiService';
+import { chatLimiter } from '../utils/rateLimiter';
+import { throttle } from '../utils/debounce';
 
 interface AiChatProps {
   allRecipes: Recipe[];
@@ -24,6 +26,17 @@ export const AiChat: React.FC<AiChatProps> = ({ allRecipes, onClose }) => {
   const handleSend = async () => {
     if (input.trim() === '' || isLoading) return;
 
+    // Kiểm tra rate limit
+    const limitCheck = chatLimiter.checkLimit();
+    if (!limitCheck.allowed) {
+      const errorMessage: ChatMessage = { 
+        role: 'model', 
+        content: `Bạn đã gửi quá nhiều tin nhắn. Vui lòng đợi ${limitCheck.retryAfter} giây nữa.` 
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
     const userMessage: ChatMessage = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
@@ -41,6 +54,9 @@ export const AiChat: React.FC<AiChatProps> = ({ allRecipes, onClose }) => {
       setIsLoading(false);
     }
   };
+
+  // Throttle handleSend để tránh spam nút Gửi
+  const throttledHandleSend = throttle(handleSend, 1000);
 
   return (
     <div className="bg-white rounded-lg shadow-lg flex flex-col h-full">
@@ -90,13 +106,13 @@ export const AiChat: React.FC<AiChatProps> = ({ allRecipes, onClose }) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            onKeyPress={(e) => e.key === 'Enter' && throttledHandleSend()}
             placeholder="Hỏi AI Chef..."
             className="flex-1 p-2 border border-gray-300 rounded-l-md focus:ring-orange-500 focus:border-orange-500"
             disabled={isLoading}
           />
           <button
-            onClick={handleSend}
+            onClick={throttledHandleSend}
             disabled={isLoading}
             className="bg-orange-500 text-white px-4 rounded-r-md hover:bg-orange-600 disabled:bg-orange-300"
           >
