@@ -80,18 +80,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onSuggestionClick }) => {
             </div>
 
             {/* Right Side: User Profile */}
-            <div className="flex-shrink-0 flex items-center space-x-2 relative">
+            <div className="flex-shrink-0 flex items-center space-x-3 relative">
                 {/* User Profile Button */}
                 <button 
                     onClick={handleUserClick}
-                    className="h-10 w-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white hover:from-orange-500 hover:to-red-600 transition shadow-md"
+                    className="flex items-center space-x-2 h-10 px-3 bg-gradient-to-br from-orange-400 to-red-500 rounded-full text-white hover:from-orange-500 hover:to-red-600 transition shadow-md"
                 >
-                    {currentUser ? (
-                        <span className="font-bold text-sm">{currentUser.name.charAt(0).toUpperCase()}</span>
-                    ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                        </svg>
+                    <div className="h-7 w-7 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        {currentUser ? (
+                            <span className="font-bold text-sm">{currentUser.name.charAt(0).toUpperCase()}</span>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                    </div>
+                    {currentUser && (
+                        <span className="font-semibold text-sm pr-1 hidden sm:block">{currentUser.name}</span>
                     )}
                 </button>
 
