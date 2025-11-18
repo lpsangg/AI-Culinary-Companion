@@ -104,30 +104,42 @@ export class SupabaseAuthService {
         return { user: null, error: 'Không thể đăng nhập' };
       }
 
-      // Get user profile or create if not exists (for Google OAuth users)
-      let profile = await supabase
+      // Get user profile or create if not exists
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('name')
         .eq('id', authData.user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when not found
 
-      // If profile doesn't exist (Google OAuth first time), create it
-      if (!profile.data && authData.user.user_metadata?.full_name) {
+      // If profile doesn't exist, create it
+      if (!profile) {
+        const displayName = authData.user.user_metadata?.full_name 
+          || authData.user.user_metadata?.name
+          || authData.user.email?.split('@')[0] 
+          || 'User';
+
         await supabase
           .from('user_profiles')
           .insert({
             id: authData.user.id,
-            name: authData.user.user_metadata.full_name || authData.user.email?.split('@')[0] || 'User',
+            name: displayName,
           });
-        
-        profile.data = { name: authData.user.user_metadata.full_name };
+
+        return {
+          user: {
+            id: authData.user.id,
+            email: authData.user.email!,
+            name: displayName,
+          },
+          error: null,
+        };
       }
 
       return {
         user: {
           id: authData.user.id,
           email: authData.user.email!,
-          name: profile.data?.name || authData.user.user_metadata?.full_name || 'User',
+          name: profile.name || authData.user.email?.split('@')[0] || 'User',
         },
         error: null,
       };
@@ -164,7 +176,7 @@ export class SupabaseAuthService {
         .from('user_profiles')
         .select('name')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
 
       return {
         id: session.user.id,
@@ -182,29 +194,39 @@ export class SupabaseAuthService {
   static onAuthStateChange(callback: (user: AuthUser | null) => void) {
     return supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        // Get or create profile for OAuth users
-        let profile = await supabase
+        // Get or create profile
+        const { data: profile } = await supabase
           .from('user_profiles')
           .select('name')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle();
 
-        // Auto-create profile for Google OAuth users
-        if (!profile.data && session.user.user_metadata?.full_name) {
+        // Auto-create profile if doesn't exist
+        if (!profile) {
+          const displayName = session.user.user_metadata?.full_name
+            || session.user.user_metadata?.name
+            || session.user.email?.split('@')[0]
+            || 'User';
+
           await supabase
             .from('user_profiles')
             .insert({
               id: session.user.id,
-              name: session.user.user_metadata.full_name,
+              name: displayName,
             });
-          profile.data = { name: session.user.user_metadata.full_name };
-        }
 
-        callback({
-          id: session.user.id,
-          email: session.user.email!,
-          name: profile.data?.name || session.user.user_metadata?.full_name || 'User',
-        });
+          callback({
+            id: session.user.id,
+            email: session.user.email!,
+            name: displayName,
+          });
+        } else {
+          callback({
+            id: session.user.id,
+            email: session.user.email!,
+            name: profile.name || session.user.email?.split('@')[0] || 'User',
+          });
+        }
       } else {
         callback(null);
       }

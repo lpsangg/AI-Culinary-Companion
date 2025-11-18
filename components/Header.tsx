@@ -7,15 +7,37 @@ import { SupabaseAuthService, type AuthUser } from '../services/supabaseAuthServ
 
 interface NavbarProps {
     onSuggestionClick: (category: keyof Omit<Filters, 'searchQuery'>, value: string) => void;
+    onShowSaved?: () => void;
+    savedCount?: number;
+    currentUser?: AuthUser | null;
+    onShowAuthModal?: () => void;
+    onShowMealPlanner?: () => void;
+    onShowSearchHistory?: () => void;
+    onBackHome?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onSuggestionClick }) => {
+export const Navbar: React.FC<NavbarProps> = ({ 
+  onSuggestionClick, 
+  onShowSaved, 
+  savedCount = 0,
+  currentUser: externalUser,
+  onShowAuthModal: externalShowAuthModal,
+  onShowMealPlanner,
+  onShowSearchHistory,
+  onBackHome
+}) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(externalUser || null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Check if user is logged in on mount and listen to auth changes
   useEffect(() => {
+    // Use external user if provided
+    if (externalUser !== undefined) {
+      setCurrentUser(externalUser);
+      return;
+    }
+
     // Get current session
     SupabaseAuthService.getCurrentUser().then(user => {
       setCurrentUser(user);
@@ -30,13 +52,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onSuggestionClick }) => {
     return () => {
       subscription?.unsubscribe();
     };
-  }, []);
+  }, [externalUser]);
 
   const handleUserClick = () => {
     if (currentUser) {
       setShowUserMenu(!showUserMenu);
     } else {
-      setShowAuthModal(true);
+      if (externalShowAuthModal) {
+        externalShowAuthModal();
+      } else {
+        setShowAuthModal(true);
+      }
     }
   };
 
@@ -50,8 +76,36 @@ export const Navbar: React.FC<NavbarProps> = ({ onSuggestionClick }) => {
     setShowUserMenu(false);
   };
 
+  const handleShowSaved = () => {
+    if (!currentUser) {
+      // Require login to view saved recipes
+      if (externalShowAuthModal) {
+        externalShowAuthModal();
+      } else {
+        setShowAuthModal(true);
+      }
+      return;
+    }
+    onShowSaved?.();
+  };
+
+  const handleShowMealPlanner = () => {
+    if (!currentUser) {
+      // Require login to use meal planner
+      if (externalShowAuthModal) {
+        externalShowAuthModal();
+      } else {
+        setShowAuthModal(true);
+      }
+      return;
+    }
+    onShowMealPlanner?.();
+  };
+
   const handleLogoClick = () => {
-    window.location.reload();
+    if (onBackHome) {
+      onBackHome();
+    }
   };
 
   return (
@@ -81,6 +135,37 @@ export const Navbar: React.FC<NavbarProps> = ({ onSuggestionClick }) => {
 
             {/* Right Side: User Profile */}
             <div className="flex-shrink-0 flex items-center space-x-3 relative">
+                {/* Meal Planner Button */}
+                {onShowMealPlanner && (
+                  <button
+                    onClick={handleShowMealPlanner}
+                    className="relative p-2 hover:bg-gray-100 rounded-full transition"
+                    title={currentUser ? "Lên kế hoạch ăn tuần" : "Đăng nhập để lập kế hoạch"}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                )}
+                
+                {/* Saved Recipes Button */}
+                {onShowSaved && (
+                  <button
+                    onClick={handleShowSaved}
+                    className="relative p-2 hover:bg-gray-100 rounded-full transition"
+                    title={currentUser ? "Món đã lưu" : "Đăng nhập để xem món đã lưu"}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    {currentUser && savedCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {savedCount > 99 ? '99+' : savedCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+                
                 {/* User Profile Button */}
                 <button 
                     onClick={handleUserClick}
@@ -107,6 +192,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onSuggestionClick }) => {
                             <p className="text-sm font-semibold text-gray-800">{currentUser.name}</p>
                             <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
                         </div>
+                        <button
+                            onClick={() => {
+                                setShowUserMenu(false);
+                                onShowSearchHistory?.();
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+                        >
+                            Lịch sử tìm kiếm AI
+                        </button>
                         <button
                             onClick={handleLogout}
                             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition flex items-center space-x-2"

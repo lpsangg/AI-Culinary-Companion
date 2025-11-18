@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Recipe } from '../types';
+import { PrintService } from '../services/printService';
 
 interface RecipeModalProps {
   recipe: Recipe;
@@ -38,8 +39,23 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({ recipe, onClose }) => 
           </button>
         </div>
         <div className="p-8">
-          <h2 className="text-4xl font-bold text-gray-900 mb-2">{recipe.name}</h2>
-          <p className="text-gray-600 mb-6">{recipe.description}</p>
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex-1">
+              <h2 className="text-4xl font-bold text-gray-900 mb-2">{recipe.name}</h2>
+              <p className="text-gray-600">{recipe.description}</p>
+            </div>
+            {/* Print Button */}
+            <button
+              onClick={() => PrintService.printRecipe(recipe)}
+              className="ml-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-105 shadow-md"
+              title="In công thức"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              <span className="font-semibold">In</span>
+            </button>
+          </div>
 
           <div className="flex flex-wrap gap-x-8 gap-y-4 justify-around text-sm text-gray-700 mb-8 border-t border-b py-4">
              <InfoItem 

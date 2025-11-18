@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Recipe } from '../types';
+import { SavedRecipesService } from '../services/savedRecipesService';
 
 interface RecipeCardProps {
   recipe: Recipe;
   onSelectRecipe: (recipe: Recipe) => void;
+  isLoggedIn?: boolean;
+  onLoginRequired?: () => void;
 }
 
 // FIX: Changed JSX.Element to React.ReactNode to resolve "Cannot find namespace 'JSX'" error.
@@ -14,7 +17,32 @@ const Tag: React.FC<{ icon: React.ReactNode, text: string }> = ({ icon, text }) 
     </div>
 );
 
-export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelectRecipe }) => {
+export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelectRecipe, isLoggedIn = false, onLoginRequired }) => {
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Check if recipe is saved on mount
+  useEffect(() => {
+    if (isLoggedIn) {
+      setIsSaved(SavedRecipesService.isRecipeSaved(recipe.id));
+    }
+  }, [recipe.id, isLoggedIn]);
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent opening recipe modal
+    
+    // Check if user is logged in
+    if (!isLoggedIn) {
+      onLoginRequired?.();
+      return;
+    }
+    
+    const newSavedState = SavedRecipesService.toggleSaveRecipe(recipe.id);
+    setIsSaved(newSavedState);
+    
+    // Dispatch custom event to notify App.tsx to update count
+    window.dispatchEvent(new CustomEvent('savedRecipesChanged'));
+  };
+
   return (
     <div 
         onClick={() => onSelectRecipe(recipe)}
@@ -29,6 +57,22 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelectRecipe }
                 text={recipe.region}
             />
         </div>
+        {/* Save/Bookmark Button */}
+        <button
+          onClick={handleSaveClick}
+          className="absolute top-2 right-2 p-2 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full shadow-md transition-all transform hover:scale-110"
+          title={isSaved ? 'Bỏ lưu' : 'Lưu món này'}
+        >
+          {isSaved ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          )}
+        </button>
       </div>
       <div className="p-4">
         <h3 className="text-lg font-bold text-gray-800 truncate">{recipe.name}</h3>

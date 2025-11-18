@@ -6,9 +6,11 @@ import { RecipeCard } from './RecipeCard';
 interface RecipeGridProps {
   recipes: Recipe[];
   onSelectRecipe: (recipe: Recipe) => void;
+  isLoggedIn?: boolean;
+  onLoginRequired?: () => void;
 }
 
-export const RecipeGrid: React.FC<RecipeGridProps> = ({ recipes, onSelectRecipe }) => {
+export const RecipeGrid: React.FC<RecipeGridProps> = ({ recipes, onSelectRecipe, isLoggedIn, onLoginRequired }) => {
   if (recipes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-96 bg-white rounded-lg shadow-md">
@@ -24,7 +26,13 @@ export const RecipeGrid: React.FC<RecipeGridProps> = ({ recipes, onSelectRecipe 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {recipes.map((recipe) => (
-        <RecipeCard key={recipe.id} recipe={recipe} onSelectRecipe={onSelectRecipe} />
+        <RecipeCard 
+          key={recipe.id} 
+          recipe={recipe} 
+          onSelectRecipe={onSelectRecipe}
+          isLoggedIn={isLoggedIn}
+          onLoginRequired={onLoginRequired}
+        />
       ))}
     </div>
   );
